@@ -5,6 +5,8 @@ import { useAuthStore } from './stores/auth'
 import SyncStatusIndicator from './components/SyncStatusIndicator.vue'
 import ToastContainer from './components/ToastContainer.vue'
 import ConfirmDialog from './components/ConfirmDialog.vue'
+import IconMenu from './components/icons/IconMenu.vue'
+import IconLogo from './components/icons/IconLogo.vue'
 
 const auth = useAuthStore()
 const router = useRouter()
@@ -24,7 +26,10 @@ async function salir() {
   <div v-if="auth.autenticado" class="layout">
     <header class="topbar">
       <div class="marca">
-        <button type="button" class="hamburguesa" @click="menuAbierto = !menuAbierto" aria-label="Abrir menú">☰</button>
+        <button type="button" class="hamburguesa" @click="menuAbierto = !menuAbierto" aria-label="Abrir menú">
+          <IconMenu />
+        </button>
+        <IconLogo />
         <strong>aGesPart</strong>
       </div>
 
@@ -33,6 +38,8 @@ async function salir() {
           <RouterLink :to="{ name: 'admin-mapa' }">Mapa</RouterLink>
           <RouterLink :to="{ name: 'admin-incidencias' }">Incidencias</RouterLink>
           <RouterLink :to="{ name: 'admin-empleados' }">Empleados</RouterLink>
+          <RouterLink :to="{ name: 'admin-ubicaciones' }">Ubicaciones</RouterLink>
+          <RouterLink :to="{ name: 'admin-errores' }">Errores</RouterLink>
         </nav>
         <nav v-else>
           <RouterLink :to="{ name: 'empleado-mis-incidencias' }">Mis incidencias</RouterLink>

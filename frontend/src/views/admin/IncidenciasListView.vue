@@ -3,6 +3,7 @@ import { onMounted, ref, watch } from 'vue'
 import { api } from '../../services/api'
 import { useToastsStore } from '../../stores/toasts'
 import EstadoBadge from '../../components/EstadoBadge.vue'
+import PrioridadBadge from '../../components/PrioridadBadge.vue'
 import FiltrosIncidencias from '../../components/admin/FiltrosIncidencias.vue'
 
 const incidencias = ref([])
@@ -10,7 +11,7 @@ const empleados = ref([])
 const cargando = ref(true)
 const pagina = ref(1)
 const meta = ref(null)
-const filtros = ref({ estado: '', empleado_id: '', tipo: '', desde: '', hasta: '' })
+const filtros = ref({ estado: '', empleado_id: '', prioridad: '', tipo: '', desde: '', hasta: '' })
 const toasts = useToastsStore()
 
 async function cargar() {
@@ -63,6 +64,7 @@ onMounted(async () => {
               <th>Tipo</th>
               <th>Descripción</th>
               <th>Estado</th>
+              <th>Prioridad</th>
               <th>Empleado</th>
               <th>Fecha</th>
               <th></th>
@@ -73,6 +75,7 @@ onMounted(async () => {
               <td data-label="Tipo">{{ incidencia.tipo }}</td>
               <td data-label="Descripción">{{ incidencia.descripcion }}</td>
               <td data-label="Estado"><EstadoBadge :estado="incidencia.estado" /></td>
+              <td data-label="Prioridad"><PrioridadBadge :prioridad="incidencia.prioridad" /></td>
               <td data-label="Empleado">{{ incidencia.empleado?.name ?? 'Sin asignar' }}</td>
               <td data-label="Fecha">{{ new Date(incidencia.created_at).toLocaleString() }}</td>
               <td data-label="">
@@ -80,7 +83,7 @@ onMounted(async () => {
               </td>
             </tr>
             <tr v-if="incidencias.length === 0">
-              <td colspan="6">No hay incidencias con estos filtros.</td>
+              <td colspan="7">No hay incidencias con estos filtros.</td>
             </tr>
           </tbody>
         </table>

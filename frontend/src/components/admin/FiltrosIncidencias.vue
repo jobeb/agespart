@@ -31,6 +31,17 @@ function actualizar(campo, valor) {
     </label>
 
     <label>
+      Prioridad
+      <select :value="modelValue.prioridad" @change="actualizar('prioridad', $event.target.value)">
+        <option value="">Todas</option>
+        <option value="baja">Baja</option>
+        <option value="normal">Normal</option>
+        <option value="alta">Alta</option>
+        <option value="urgente">Urgente</option>
+      </select>
+    </label>
+
+    <label>
       Tipo
       <select :value="modelValue.tipo" @change="actualizar('tipo', $event.target.value)">
         <option value="">Todos</option>

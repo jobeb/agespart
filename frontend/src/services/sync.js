@@ -38,6 +38,15 @@ export async function flushOutbox() {
             data: data.data,
           })
           await db.outbox.delete(entrada.id)
+        } else if (entrada.tipo_operacion === 'crear_comentario') {
+          const cacheado = await db.incidenciasCache.get(entrada.incidencia_uuid)
+          if (!cacheado?.server_id) continue // el padre aún no está sincronizado, se reintenta luego
+
+          await api.post(`/incidencias/${cacheado.server_id}/eventos`, {
+            uuid_cliente: entrada.uuid_cliente,
+            comentario: entrada.payload.comentario,
+          })
+          await db.outbox.delete(entrada.id)
         }
       } catch (error) {
         if (!error.response) break // sin red real a mitad de sync: paramos y reintentamos más tarde

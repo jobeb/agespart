@@ -9,7 +9,7 @@ import FiltrosIncidencias from '../../components/admin/FiltrosIncidencias.vue'
 const incidencias = ref([])
 const empleados = ref([])
 const cargando = ref(false)
-const filtros = ref({ estado: '', empleado_id: '', tipo: '', desde: '', hasta: '' })
+const filtros = ref({ estado: '', empleado_id: '', prioridad: '', tipo: '', desde: '', hasta: '' })
 const router = useRouter()
 const toasts = useToastsStore()
 const mapaRef = ref(null)

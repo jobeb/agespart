@@ -27,7 +27,10 @@ function chunk(type, data) {
   return Buffer.concat([len, typeBuf, data, crcBuf])
 }
 
-function solidPng(size, [r, g, b], marginRatio = 0) {
+// Icono simple tipo "marcador de ubicación": círculo teal (--primary) con un
+// punto blanco en el centro, sobre fondo del theme_color. Sin dependencias de
+// imagen (canvas/sharp): se rasteriza a mano con ecuaciones de distancia.
+function pinPng(size, marginRatio = 0) {
   const ihdr = Buffer.alloc(13)
   ihdr.writeUInt32BE(size, 0)
   ihdr.writeUInt32BE(size, 4)
@@ -38,21 +41,37 @@ function solidPng(size, [r, g, b], marginRatio = 0) {
   ihdr.writeUInt8(0, 12)
 
   const margin = Math.round(size * marginRatio)
+  const contentSize = size - margin * 2
+  const cx = size / 2
+  const cy = size / 2
+  const radioExterior = contentSize * 0.44
+  const radioInterior = contentSize * 0.17
+
+  const fondo = [15, 23, 42] // theme_color #0f172a
+  const teal = [15, 118, 110] // --primary #0f766e
+  const blanco = [255, 255, 255]
+
   const raw = Buffer.alloc(size * (1 + size * 3))
   let offset = 0
   for (let y = 0; y < size; y++) {
     raw[offset++] = 0 // no filter
     for (let x = 0; x < size; x++) {
-      const dentro = x >= margin && x < size - margin && y >= margin && y < size - margin
-      if (dentro) {
-        raw[offset++] = r
-        raw[offset++] = g
-        raw[offset++] = b
+      const dx = x - cx
+      const dy = y - cy
+      const dist = Math.sqrt(dx * dx + dy * dy)
+
+      let color
+      if (dist <= radioInterior) {
+        color = blanco
+      } else if (dist <= radioExterior) {
+        color = teal
       } else {
-        raw[offset++] = 15
-        raw[offset++] = 23
-        raw[offset++] = 42 // fondo theme_color #0f172a
+        color = fondo
       }
+
+      raw[offset++] = color[0]
+      raw[offset++] = color[1]
+      raw[offset++] = color[2]
     }
   }
 
@@ -65,10 +84,8 @@ function solidPng(size, [r, g, b], marginRatio = 0) {
 const outDir = path.join(__dirname, '..', 'public', 'icons')
 fs.mkdirSync(outDir, { recursive: true })
 
-const azul = [37, 99, 235] // acento
-
-fs.writeFileSync(path.join(outDir, 'icon-192.png'), solidPng(192, azul))
-fs.writeFileSync(path.join(outDir, 'icon-512.png'), solidPng(512, azul))
-fs.writeFileSync(path.join(outDir, 'icon-maskable-512.png'), solidPng(512, azul, 0.1))
+fs.writeFileSync(path.join(outDir, 'icon-192.png'), pinPng(192))
+fs.writeFileSync(path.join(outDir, 'icon-512.png'), pinPng(512))
+fs.writeFileSync(path.join(outDir, 'icon-maskable-512.png'), pinPng(512, 0.1))
 
 console.log('Iconos generados en', outDir)

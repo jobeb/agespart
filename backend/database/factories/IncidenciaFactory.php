@@ -29,6 +29,7 @@ class IncidenciaFactory extends Factory
             'direccion' => $this->faker->address(),
             'empleado_id' => User::factory()->state(['rol' => 'empleado']),
             'creado_por' => User::factory()->state(['rol' => 'admin']),
+            'version' => 1,
         ];
     }
 }

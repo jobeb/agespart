@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { db } from '../services/db'
 import { api } from '../services/api'
 import { flushOutbox } from '../services/sync'
+import { comprimirImagen } from '../utils/imagen'
 
 export const useIncidenciasStore = defineStore('incidencias', {
   state: () => ({
@@ -37,9 +38,9 @@ export const useIncidenciasStore = defineStore('incidencias', {
       this.cargando = false
     },
 
-    async crearIncidencia({ tipo, descripcion, lat, lng, direccion, fotos = [] }) {
+    async crearIncidencia({ tipo, prioridad = 'normal', descripcion, lat, lng, direccion, ubicacion_cliente_id = null, fotos = [] }) {
       const uuid_cliente = crypto.randomUUID()
-      const payload = { uuid_cliente, tipo, descripcion, lat, lng, direccion, estado: 'pendiente' }
+      const payload = { uuid_cliente, tipo, prioridad, descripcion, lat, lng, direccion, ubicacion_cliente_id, estado: 'pendiente' }
 
       await db.incidenciasCache.put({
         uuid_cliente,
@@ -70,25 +71,27 @@ export const useIncidenciasStore = defineStore('incidencias', {
     },
 
     async agregarFoto(incidenciaUuid, archivo) {
+      const comprimida = await comprimirImagen(archivo)
+
       await db.fotosBlobs.put({
         uuid_cliente: crypto.randomUUID(),
         incidencia_uuid: incidenciaUuid,
-        blob: archivo,
-        nombre_archivo: archivo.name,
+        blob: comprimida,
+        nombre_archivo: comprimida.name,
         estado_sync: 'pendiente',
       })
 
       flushOutbox()
     },
 
-    async actualizarEstado(uuid_cliente, estado) {
+    async _encolarActualizacion(uuid_cliente, cambios) {
       const cacheado = await db.incidenciasCache.get(uuid_cliente)
       if (!cacheado) return
 
       await db.incidenciasCache.update(uuid_cliente, {
-        estado,
+        ...(cambios.estado ? { estado: cambios.estado } : {}),
         estado_sync: 'pendiente',
-        data: { ...cacheado.data, estado },
+        data: { ...cacheado.data, ...cambios },
       })
 
       const creacionPendiente = await db.outbox
@@ -97,18 +100,54 @@ export const useIncidenciasStore = defineStore('incidencias', {
 
       if (creacionPendiente) {
         await db.outbox.update(creacionPendiente.id, {
-          payload: { ...creacionPendiente.payload, estado },
+          payload: { ...creacionPendiente.payload, ...cambios },
         })
       } else {
         await db.outbox.add({
           uuid_cliente,
           tipo_operacion: 'actualizar_incidencia',
-          payload: { estado },
+          payload: cambios,
           estado_sync: 'pendiente',
           intentos: 0,
           created_at: new Date().toISOString(),
         })
       }
+
+      flushOutbox()
+    },
+
+    async actualizarEstado(uuid_cliente, estado) {
+      await this._encolarActualizacion(uuid_cliente, { estado })
+    },
+
+    /**
+     * Marca la incidencia como resuelta, opcionalmente con firma de conformidad
+     * del receptor. Reutiliza el mismo mecanismo de actualizarEstado (mismo
+     * outbox, mismo PATCH, mismo dedupe), solo añade los campos de firma.
+     */
+    async resolverConConformidad(uuid_cliente, { firma_base64 = null, firma_nombre_receptor = null } = {}) {
+      await this._encolarActualizacion(uuid_cliente, {
+        estado: 'resuelta',
+        firma_base64,
+        firma_nombre_receptor,
+      })
+    },
+
+    /**
+     * Añade un comentario a la incidencia. Se encola en el mismo outbox que
+     * el resto de escrituras offline, con su propio uuid_cliente (distinto
+     * del de la incidencia) para el dedupe por reintento.
+     */
+    async agregarComentario(incidenciaUuid, comentario) {
+      await db.outbox.add({
+        uuid_cliente: crypto.randomUUID(),
+        incidencia_uuid: incidenciaUuid,
+        tipo_operacion: 'crear_comentario',
+        payload: { comentario },
+        estado_sync: 'pendiente',
+        intentos: 0,
+        created_at: new Date().toISOString(),
+      })
 
       flushOutbox()
     },

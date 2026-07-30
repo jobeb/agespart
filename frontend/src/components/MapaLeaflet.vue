@@ -14,7 +14,7 @@ const emit = defineEmits(['update:modelValue', 'marker-click'])
 
 const colorPorEstado = {
   pendiente: '#c9a400',
-  en_curso: '#1d4ed8',
+  en_curso: '#0f766e',
   resuelta: '#15803d',
 }
 

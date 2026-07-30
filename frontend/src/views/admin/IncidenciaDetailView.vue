@@ -5,6 +5,9 @@ import { api } from '../../services/api'
 import { useToastsStore } from '../../stores/toasts'
 import { useConfirm } from '../../composables/useConfirm'
 import EstadoBadge from '../../components/EstadoBadge.vue'
+import PrioridadBadge from '../../components/PrioridadBadge.vue'
+import HistorialIncidencia from '../../components/HistorialIncidencia.vue'
+import IconClose from '../../components/icons/IconClose.vue'
 
 const route = useRoute()
 const toasts = useToastsStore()
@@ -14,8 +17,10 @@ const incidencia = ref(null)
 const empleados = ref([])
 const empleadoSeleccionado = ref('')
 const guardando = ref(false)
+const eventos = ref([])
+const enviandoComentario = ref(false)
 
-const edicion = ref({ tipo: '', descripcion: '' })
+const edicion = ref({ tipo: '', prioridad: '', descripcion: '' })
 const guardandoEdicion = ref(false)
 
 async function cargar() {
@@ -27,9 +32,38 @@ async function cargar() {
     incidencia.value = dataIncidencia.data
     empleados.value = dataEmpleados.data
     empleadoSeleccionado.value = incidencia.value.empleado?.id ?? ''
-    edicion.value = { tipo: incidencia.value.tipo, descripcion: incidencia.value.descripcion ?? '' }
+    edicion.value = {
+      tipo: incidencia.value.tipo,
+      prioridad: incidencia.value.prioridad,
+      descripcion: incidencia.value.descripcion ?? '',
+    }
+    await cargarEventos()
   } catch {
     toasts.notificar({ tipo: 'error', mensaje: 'No se pudo cargar la incidencia.' })
+  }
+}
+
+async function cargarEventos() {
+  try {
+    const { data } = await api.get(`/incidencias/${route.params.id}/eventos`)
+    eventos.value = data.data
+  } catch {
+    // no bloqueante: si falla, el historial simplemente queda vacío
+  }
+}
+
+async function comentar(texto) {
+  enviandoComentario.value = true
+  try {
+    await api.post(`/incidencias/${route.params.id}/eventos`, {
+      uuid_cliente: crypto.randomUUID(),
+      comentario: texto,
+    })
+    await cargarEventos()
+  } catch {
+    toasts.notificar({ tipo: 'error', mensaje: 'No se pudo añadir el comentario.' })
+  } finally {
+    enviandoComentario.value = false
   }
 }
 
@@ -51,11 +85,21 @@ async function reasignar() {
 async function guardarEdicion() {
   guardandoEdicion.value = true
   try {
-    const { data } = await api.patch(`/incidencias/${route.params.id}`, edicion.value)
+    const { data } = await api.patch(`/incidencias/${route.params.id}`, {
+      ...edicion.value,
+      version: incidencia.value.version,
+    })
     incidencia.value = data.data
+    edicion.value = { tipo: incidencia.value.tipo, prioridad: incidencia.value.prioridad, descripcion: incidencia.value.descripcion ?? '' }
     toasts.notificar({ tipo: 'exito', mensaje: 'Cambios guardados.' })
-  } catch {
-    toasts.notificar({ tipo: 'error', mensaje: 'No se pudieron guardar los cambios.' })
+  } catch (e) {
+    if (e.response?.status === 409) {
+      incidencia.value = e.response.data.data
+      edicion.value = { tipo: incidencia.value.tipo, prioridad: incidencia.value.prioridad, descripcion: incidencia.value.descripcion ?? '' }
+      toasts.notificar({ tipo: 'error', mensaje: e.response.data.message })
+    } else {
+      toasts.notificar({ tipo: 'error', mensaje: 'No se pudieron guardar los cambios.' })
+    }
   } finally {
     guardandoEdicion.value = false
   }
@@ -84,10 +128,15 @@ onMounted(cargar)
 <template>
   <div v-if="incidencia" class="detalle">
     <h1>{{ incidencia.tipo === 'reparacion' ? 'Reparación' : 'Instalación' }}</h1>
-    <EstadoBadge :estado="incidencia.estado" />
+    <div class="badges">
+      <EstadoBadge :estado="incidencia.estado" />
+      <PrioridadBadge :prioridad="incidencia.prioridad" />
+    </div>
 
+    <p v-if="incidencia.ubicacion_cliente"><strong>Ubicación:</strong> {{ incidencia.ubicacion_cliente.nombre }}</p>
     <p v-if="incidencia.direccion"><strong>Dirección:</strong> {{ incidencia.direccion }}</p>
     <p v-if="incidencia.lat"><strong>Coordenadas:</strong> {{ incidencia.lat }}, {{ incidencia.lng }}</p>
+    <RouterLink :to="{ name: 'parte-trabajo', params: { id: incidencia.id } }">Ver parte de trabajo</RouterLink>
 
     <section class="card">
       <h2>Editar</h2>
@@ -97,6 +146,15 @@ onMounted(cargar)
           <select v-model="edicion.tipo">
             <option value="reparacion">Reparación</option>
             <option value="instalacion">Instalación</option>
+          </select>
+        </label>
+        <label>
+          Prioridad
+          <select v-model="edicion.prioridad">
+            <option value="baja">Baja</option>
+            <option value="normal">Normal</option>
+            <option value="alta">Alta</option>
+            <option value="urgente">Urgente</option>
           </select>
         </label>
         <label>
@@ -122,10 +180,18 @@ onMounted(cargar)
       <div class="fotos-grid">
         <div v-for="foto in incidencia.fotos" :key="foto.id" class="foto">
           <img :src="foto.url" alt="Foto de la incidencia" />
-          <button type="button" class="quitar" @click="borrarFoto(foto)" aria-label="Eliminar foto">×</button>
+          <button type="button" class="quitar" @click="borrarFoto(foto)" aria-label="Eliminar foto"><IconClose /></button>
         </div>
       </div>
     </div>
+
+    <div v-if="incidencia.firma_base64" class="card">
+      <h2>Conformidad de cierre</h2>
+      <p v-if="incidencia.firma_nombre_receptor">Recibido por: {{ incidencia.firma_nombre_receptor }}</p>
+      <img :src="incidencia.firma_base64" alt="Firma de conformidad" class="firma" />
+    </div>
+
+    <HistorialIncidencia :eventos="eventos" :enviando="enviandoComentario" @comentar="comentar" />
   </div>
 </template>
 
@@ -136,6 +202,10 @@ onMounted(cargar)
   display: flex;
   flex-direction: column;
   gap: 1rem;
+}
+.badges {
+  display: flex;
+  gap: 0.5rem;
 }
 .card {
   border: 1px solid rgba(128, 128, 128, 0.2);
@@ -184,10 +254,16 @@ onMounted(cargar)
   min-height: auto;
   border-radius: 50%;
   border: none;
-  background: #d33;
+  background: var(--danger);
   color: #fff;
   cursor: pointer;
   line-height: 1;
   padding: 0;
+}
+.firma {
+  max-width: 300px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: #fff;
 }
 </style>

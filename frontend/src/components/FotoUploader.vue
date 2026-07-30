@@ -1,5 +1,7 @@
 <script setup>
 import { ref } from 'vue'
+import IconCamera from './icons/IconCamera.vue'
+import IconClose from './icons/IconClose.vue'
 
 const props = defineProps({
   modelValue: { type: Array, default: () => [] }, // array de File
@@ -34,11 +36,11 @@ function quitar(index) {
     <div class="previews">
       <div v-for="(archivo, index) in modelValue" :key="index" class="preview">
         <img :src="previsualizar(archivo)" alt="Foto de la incidencia" />
-        <button type="button" class="quitar" @click="quitar(index)">×</button>
+        <button type="button" class="quitar" @click="quitar(index)" aria-label="Quitar foto"><IconClose /></button>
       </div>
     </div>
 
-    <button type="button" @click="input.click()">📷 Añadir foto</button>
+    <button type="button" class="btn btn-secondary" @click="input.click()"><IconCamera /> Añadir foto</button>
     <input ref="input" type="file" accept="image/*" capture="environment" multiple hidden @change="onFileChange" />
   </div>
 </template>
@@ -69,18 +71,17 @@ function quitar(index) {
   position: absolute;
   top: -6px;
   right: -6px;
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
+  min-height: auto;
+  padding: 0;
   border-radius: 50%;
   border: none;
-  background: #d33;
+  background: var(--danger);
   color: #fff;
   cursor: pointer;
-  line-height: 1;
 }
-button {
+.foto-uploader > button {
   align-self: flex-start;
-  padding: 0.5rem 0.8rem;
-  cursor: pointer;
 }
 </style>

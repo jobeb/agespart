@@ -3,6 +3,7 @@ import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { obtenerPosicionActual } from '../../composables/useGeolocation'
 import { useIncidenciasStore } from '../../stores/incidencias'
+import { api } from '../../services/api'
 import MapaLeaflet from '../../components/MapaLeaflet.vue'
 import FotoUploader from '../../components/FotoUploader.vue'
 
@@ -10,8 +11,11 @@ const router = useRouter()
 const store = useIncidenciasStore()
 
 const tipo = ref('reparacion')
+const prioridad = ref('normal')
 const descripcion = ref('')
 const direccion = ref('')
+const ubicacionClienteId = ref('')
+const ubicaciones = ref([])
 const fotos = ref([])
 const posicion = ref(null)
 const avisoUbicacion = ref('')
@@ -19,6 +23,13 @@ const buscandoUbicacion = ref(true)
 const guardando = ref(false)
 
 onMounted(async () => {
+  try {
+    const { data } = await api.get('/ubicaciones-clientes')
+    ubicaciones.value = data.data
+  } catch {
+    // el formulario sigue funcionando sin catálogo si falla (no bloqueante)
+  }
+
   const resultado = await obtenerPosicionActual()
   buscandoUbicacion.value = false
 
@@ -29,12 +40,24 @@ onMounted(async () => {
   }
 })
 
+function alSeleccionarUbicacion() {
+  const ubicacion = ubicaciones.value.find((u) => u.id === Number(ubicacionClienteId.value))
+  if (!ubicacion) return
+
+  if (ubicacion.direccion) direccion.value = ubicacion.direccion
+  if (ubicacion.lat != null && ubicacion.lng != null) {
+    posicion.value = { lat: ubicacion.lat, lng: ubicacion.lng }
+  }
+}
+
 async function guardar() {
   guardando.value = true
   await store.crearIncidencia({
     tipo: tipo.value,
+    prioridad: prioridad.value,
     descripcion: descripcion.value,
     direccion: direccion.value,
+    ubicacion_cliente_id: ubicacionClienteId.value || null,
     lat: posicion.value?.lat ?? null,
     lng: posicion.value?.lng ?? null,
     fotos: fotos.value,
@@ -53,6 +76,24 @@ async function guardar() {
         <select v-model="tipo">
           <option value="reparacion">Reparación</option>
           <option value="instalacion">Instalación</option>
+        </select>
+      </label>
+
+      <label>
+        Prioridad
+        <select v-model="prioridad">
+          <option value="baja">Baja</option>
+          <option value="normal">Normal</option>
+          <option value="alta">Alta</option>
+          <option value="urgente">Urgente</option>
+        </select>
+      </label>
+
+      <label v-if="ubicaciones.length">
+        Ubicación conocida (opcional)
+        <select v-model="ubicacionClienteId" @change="alSeleccionarUbicacion">
+          <option value="">Ninguna, dirección manual</option>
+          <option v-for="ubicacion in ubicaciones" :key="ubicacion.id" :value="ubicacion.id">{{ ubicacion.nombre }}</option>
         </select>
       </label>
 

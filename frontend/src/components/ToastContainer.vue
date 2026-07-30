@@ -1,5 +1,6 @@
 <script setup>
 import { useToastsStore } from '../stores/toasts'
+import IconClose from './icons/IconClose.vue'
 
 const toasts = useToastsStore()
 </script>
@@ -8,7 +9,7 @@ const toasts = useToastsStore()
   <TransitionGroup tag="div" name="toast" class="toast-container">
     <div v-for="toast in toasts.lista" :key="toast.id" class="toast" :class="toast.tipo">
       <span>{{ toast.mensaje }}</span>
-      <button type="button" class="cerrar" @click="toasts.cerrar(toast.id)" aria-label="Cerrar aviso">×</button>
+      <button type="button" class="cerrar" @click="toasts.cerrar(toast.id)" aria-label="Cerrar aviso"><IconClose /></button>
     </div>
   </TransitionGroup>
 </template>

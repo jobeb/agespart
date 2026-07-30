@@ -47,5 +47,9 @@ class AppServiceProvider extends ServiceProvider
                 ], Response::HTTP_TOO_MANY_REQUESTS);
             });
         });
+
+        RateLimiter::for('frontend-errors', function (Request $request) {
+            return Limit::perMinute(10)->by($request->ip());
+        });
     }
 }

@@ -6,7 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreEmpleadoRequest;
 use App\Http\Resources\UserResource;
 use App\Models\User;
+use App\Support\SesionesUsuario;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 class EmpleadoController extends Controller
 {
@@ -40,5 +43,28 @@ class EmpleadoController extends Controller
         $empleado->update($data);
 
         return new UserResource($empleado);
+    }
+
+    /**
+     * Baja definitiva "RGPD-lite": sustituye los datos personales por
+     * placeholders, revoca accesos y hace soft-delete. El histórico de
+     * incidencias/bitácora no se toca (integridad referencial + snapshot
+     * de nombre ya guardado en incidencia_eventos.actor_nombre).
+     */
+    public function anonimizar(User $empleado)
+    {
+        $empleado->update([
+            'name' => 'Empleado eliminado #'.$empleado->id,
+            'email' => 'empleado-eliminado-'.$empleado->id.'@anonimizado.local',
+            'password' => Hash::make(Str::random(40)),
+            'activo' => false,
+        ]);
+
+        $empleado->tokens()->delete();
+        SesionesUsuario::invalidarOtras($empleado, null);
+        $empleado->pushSubscriptions()->delete();
+        $empleado->delete();
+
+        return response()->noContent();
     }
 }

@@ -9,6 +9,7 @@ import {
   descartarFotoFallida,
 } from '../services/sync'
 import { useConfirm } from '../composables/useConfirm'
+import IconClose from './icons/IconClose.vue'
 
 const emit = defineEmits(['cerrar'])
 const { confirmar } = useConfirm()
@@ -52,7 +53,7 @@ async function descartar(accion, ...args) {
     <div class="panel">
       <div class="cabecera">
         <h2>Cambios con error de sincronización</h2>
-        <button type="button" class="cerrar" @click="emit('cerrar')" aria-label="Cerrar">×</button>
+        <button type="button" class="cerrar" @click="emit('cerrar')" aria-label="Cerrar"><IconClose /></button>
       </div>
 
       <p v-if="entradas.length === 0 && fotos.length === 0" class="vacio">No hay cambios pendientes con error.</p>

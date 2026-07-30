@@ -22,9 +22,11 @@ class StoreIncidenciaRequest extends FormRequest
             'tipo' => ['required', 'in:reparacion,instalacion'],
             'descripcion' => ['nullable', 'string'],
             'estado' => ['nullable', 'in:pendiente,en_curso,resuelta'],
+            'prioridad' => ['nullable', 'in:baja,normal,alta,urgente'],
             'lat' => ['nullable', 'numeric', 'between:-90,90'],
             'lng' => ['nullable', 'numeric', 'between:-180,180'],
             'direccion' => ['nullable', 'string', 'max:255'],
+            'ubicacion_cliente_id' => ['nullable', 'exists:ubicaciones_clientes,id'],
             'empleado_id' => ['nullable', 'exists:users,id'],
         ];
     }

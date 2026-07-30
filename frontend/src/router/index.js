@@ -6,11 +6,14 @@ const routes = [
   { path: '/olvide-password', name: 'olvide-password', component: () => import('../views/ForgotPasswordView.vue'), meta: { publica: true } },
   { path: '/restablecer-password', name: 'restablecer-password', component: () => import('../views/ResetPasswordView.vue'), meta: { publica: true } },
   { path: '/perfil', name: 'perfil', component: () => import('../views/ProfileView.vue') },
+  { path: '/incidencias/:id/parte', name: 'parte-trabajo', component: () => import('../views/ParteTrabajoView.vue') },
 
   { path: '/admin/mapa', name: 'admin-mapa', component: () => import('../views/admin/DashboardMapView.vue'), meta: { rol: 'admin' } },
   { path: '/admin/incidencias', name: 'admin-incidencias', component: () => import('../views/admin/IncidenciasListView.vue'), meta: { rol: 'admin' } },
   { path: '/admin/incidencias/:id', name: 'admin-incidencia-detalle', component: () => import('../views/admin/IncidenciaDetailView.vue'), meta: { rol: 'admin' } },
   { path: '/admin/empleados', name: 'admin-empleados', component: () => import('../views/admin/EmpleadosView.vue'), meta: { rol: 'admin' } },
+  { path: '/admin/errores', name: 'admin-errores', component: () => import('../views/admin/ErroresFrontendView.vue'), meta: { rol: 'admin' } },
+  { path: '/admin/ubicaciones', name: 'admin-ubicaciones', component: () => import('../views/admin/UbicacionesClientesView.vue'), meta: { rol: 'admin' } },
 
   { path: '/empleado/mis-incidencias', name: 'empleado-mis-incidencias', component: () => import('../views/empleado/MisIncidenciasView.vue'), meta: { rol: 'empleado' } },
   { path: '/empleado/incidencias/nueva', name: 'empleado-incidencia-nueva', component: () => import('../views/empleado/IncidenciaFormView.vue'), meta: { rol: 'empleado' } },

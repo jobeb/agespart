@@ -54,6 +54,23 @@ async function alternarActivo(empleado) {
   }
 }
 
+async function anonimizar(empleado) {
+  const ok = await confirmar({
+    titulo: 'Dar de baja y anonimizar',
+    mensaje: `Esto borra permanentemente los datos personales de ${empleado.name} (nombre, email, sesiones, notificaciones) y desactiva su cuenta. El historial de sus incidencias se conserva. Esta acción NO se puede deshacer.`,
+    textoConfirmar: 'Anonimizar',
+  })
+  if (!ok) return
+
+  try {
+    await api.patch(`/empleados/${empleado.id}/anonimizar`)
+    await cargar()
+    toasts.notificar({ tipo: 'exito', mensaje: 'Empleado anonimizado.' })
+  } catch {
+    toasts.notificar({ tipo: 'error', mensaje: 'No se pudo anonimizar el empleado.' })
+  }
+}
+
 onMounted(cargar)
 </script>
 
@@ -76,6 +93,7 @@ onMounted(cargar)
             <th>Nombre</th>
             <th>Email</th>
             <th>Activo</th>
+            <th></th>
           </tr>
         </thead>
         <tbody>
@@ -87,6 +105,9 @@ onMounted(cargar)
                 {{ empleado.activo ? 'Activo' : 'Inactivo' }}
               </button>
             </td>
+            <td>
+              <button type="button" class="btn btn-danger" @click="anonimizar(empleado)">Anonimizar</button>
+            </td>
           </tr>
         </tbody>
       </table>
@@ -97,7 +118,7 @@ onMounted(cargar)
 <style scoped>
 .empleados {
   padding: 1rem;
-  max-width: 640px;
+  max-width: 720px;
 }
 .nuevo {
   display: flex;

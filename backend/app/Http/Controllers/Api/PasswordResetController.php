@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Support\SesionesUsuario;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
@@ -34,6 +35,8 @@ class PasswordResetController extends Controller
             $data,
             function ($user, $password) {
                 $user->forceFill(['password' => Hash::make($password)])->save();
+                // Sin "sesión actual" en este flujo (llega por email): se cierran todas.
+                SesionesUsuario::invalidarOtras($user, null);
             }
         );
 

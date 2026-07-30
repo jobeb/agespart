@@ -92,6 +92,48 @@ class IncidenciaApiTest extends TestCase
         $response->assertStatus(403);
     }
 
+    public function test_admin_no_puede_editar_con_una_version_desactualizada(): void
+    {
+        $admin = User::factory()->create(['rol' => 'admin']);
+        $empleado = User::factory()->create(['rol' => 'empleado']);
+        $incidencia = Incidencia::factory()->create(['empleado_id' => $empleado->id, 'creado_por' => $admin->id]);
+
+        $response = $this->actingAs($admin)->patchJson("/api/incidencias/{$incidencia->id}", [
+            'descripcion' => 'Cambio con version vieja',
+            'version' => $incidencia->version + 5,
+        ]);
+
+        $response->assertStatus(409);
+        $this->assertSame($incidencia->descripcion, $incidencia->fresh()->descripcion);
+    }
+
+    public function test_admin_puede_editar_con_la_version_correcta_y_esta_avanza(): void
+    {
+        $admin = User::factory()->create(['rol' => 'admin']);
+        $empleado = User::factory()->create(['rol' => 'empleado']);
+        $incidencia = Incidencia::factory()->create(['empleado_id' => $empleado->id, 'creado_por' => $admin->id]);
+
+        $response = $this->actingAs($admin)->patchJson("/api/incidencias/{$incidencia->id}", [
+            'descripcion' => 'Cambio correcto',
+            'version' => $incidencia->version,
+        ]);
+
+        $response->assertOk()->assertJsonPath('data.version', $incidencia->version + 1);
+    }
+
+    public function test_un_empleado_no_esta_sujeto_al_control_de_version(): void
+    {
+        $empleado = User::factory()->create(['rol' => 'empleado']);
+        $admin = User::factory()->create(['rol' => 'admin']);
+        $incidencia = Incidencia::factory()->create(['empleado_id' => $empleado->id, 'creado_por' => $admin->id]);
+
+        $response = $this->actingAs($empleado)->patchJson("/api/incidencias/{$incidencia->id}", [
+            'estado' => 'en_curso',
+        ]);
+
+        $response->assertOk();
+    }
+
     public function test_subida_de_foto_asocia_correctamente_el_path_a_la_incidencia(): void
     {
         Storage::fake('public');
@@ -108,5 +150,18 @@ class IncidenciaApiTest extends TestCase
         $response->assertCreated();
         $this->assertSame(1, $incidencia->fotos()->count());
         Storage::disk('public')->assertExists($incidencia->fotos()->first()->path);
+    }
+
+    public function test_borrar_una_incidencia_es_un_soft_delete_no_un_borrado_definitivo(): void
+    {
+        $admin = User::factory()->create(['rol' => 'admin']);
+        $empleado = User::factory()->create(['rol' => 'empleado']);
+        $incidencia = Incidencia::factory()->create(['empleado_id' => $empleado->id, 'creado_por' => $admin->id]);
+
+        $this->actingAs($admin)->deleteJson("/api/incidencias/{$incidencia->id}")->assertNoContent();
+
+        $this->assertSoftDeleted($incidencia);
+        $this->assertNotNull(Incidencia::withTrashed()->find($incidencia->id));
+        $this->assertNull(Incidencia::find($incidencia->id));
     }
 }
